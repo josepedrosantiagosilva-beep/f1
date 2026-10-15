@@ -1,0 +1,338 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Coração de Linhas</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background: #030000;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Fundo com o carro de Fórmula 1 */
+    .f1-background {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+
+      background-image:
+        linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.12),
+          rgba(0, 0, 0, 0.28)
+        ),
+        url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNfoMEwUduopGMylpSJfJPPqVhaPBI7YfA5bK93Rpkyg&s=10");
+
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      opacity: 0;
+      transform: scale(1.04);
+
+      transition:
+        opacity 2.5s ease,
+        transform 6s ease;
+    }
+
+    /* Canvas do coração */
+    #coracao {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+
+      display: block;
+      width: 100%;
+      height: 100%;
+
+      opacity: 1;
+      transition: opacity 2s ease;
+    }
+
+    /* Transição final */
+    body.finalizado .f1-background {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    body.finalizado #coracao {
+      opacity: 0;
+    }
+
+    /* Ajustes para celulares */
+    @media (max-width: 600px) {
+      .f1-background {
+        background-position: center center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .f1-background,
+      #coracao {
+        transition-duration: 0.5s;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="f1-background" aria-hidden="true"></div>
+
+  <canvas id="coracao"></canvas>
+
+  <script>
+    const canvas = document.getElementById("coracao");
+    const ctx = canvas.getContext("2d");
+
+    let largura = window.innerWidth;
+    let altura = window.innerHeight;
+    let progresso = 0;
+    let finalizado = false;
+
+    // Velocidade da formação do coração.
+    const totalLinhas = 650;
+    const linhasPorFrame = 2;
+
+    // Evita distorções em telas de alta densidade.
+    function ajustarCanvas() {
+      const dpr = Math.min(
+        window.devicePixelRatio || 1,
+        2
+      );
+
+      largura = window.innerWidth;
+      altura = window.innerHeight;
+
+      canvas.width = Math.round(largura * dpr);
+      canvas.height = Math.round(altura * dpr);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    window.addEventListener("resize", ajustarCanvas);
+
+    ajustarCanvas();
+
+    // Fórmula matemática do coração.
+    function heartX(t) {
+      return 16 * Math.pow(Math.sin(t), 3);
+    }
+
+    function heartY(t) {
+      return (
+        13 * Math.cos(t) -
+        5 * Math.cos(2 * t) -
+        2 * Math.cos(3 * t) -
+        Math.cos(4 * t)
+      );
+    }
+
+    function desenhar() {
+      ctx.clearRect(0, 0, largura, altura);
+
+      const centroX = largura / 2;
+      const centroY = altura / 2;
+
+      // Mantém o coração proporcional em qualquer tela.
+      const escala = Math.min(
+        largura / 43,
+        altura / 40,
+        19
+      );
+
+      const escalaFinal = Math.min(
+        escala,
+        (largura * 0.43) / 16,
+        (altura * 0.40) / 17
+      );
+
+      // Fundo escuro com iluminação vermelha discreta.
+      const fundo = ctx.createRadialGradient(
+        centroX,
+        centroY,
+        0,
+        centroX,
+        centroY,
+        Math.max(largura, altura) * 0.7
+      );
+
+      fundo.addColorStop(0, "#160000");
+      fundo.addColorStop(0.55, "#080000");
+      fundo.addColorStop(1, "#030000");
+
+      ctx.fillStyle = fundo;
+      ctx.fillRect(0, 0, largura, altura);
+
+      // Formação progressiva das linhas.
+      const limite = Math.min(
+        progresso,
+        totalLinhas
+      );
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      for (let i = 0; i < limite; i++) {
+        const t =
+          (i / totalLinhas) * Math.PI * 2;
+
+        const x =
+          centroX + heartX(t) * escalaFinal;
+
+        const y =
+          centroY - heartY(t) * escalaFinal;
+
+        // Camada externa de brilho.
+        ctx.beginPath();
+        ctx.moveTo(centroX, centroY);
+        ctx.lineTo(x, y);
+
+        ctx.strokeStyle =
+          "rgba(255, 0, 25, 0.10)";
+
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = "#ff001e";
+        ctx.shadowBlur = 5;
+        ctx.stroke();
+
+        // Linha interna mais delicada.
+        ctx.beginPath();
+        ctx.moveTo(centroX, centroY);
+        ctx.lineTo(x, y);
+
+        ctx.strokeStyle =
+          `rgba(255, ${8 + (i % 18)}, 30, 0.48)`;
+
+        ctx.lineWidth = 0.65;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+      }
+
+      // Contorno final para definir a silhueta.
+      if (progresso >= totalLinhas) {
+        ctx.beginPath();
+
+        for (let i = 0; i <= 500; i++) {
+          const t =
+            (i / 500) * Math.PI * 2;
+
+          const x =
+            centroX + heartX(t) * escalaFinal;
+
+          const y =
+            centroY - heartY(t) * escalaFinal;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        ctx.closePath();
+
+        ctx.strokeStyle =
+          "rgba(255, 45, 65, 0.9)";
+
+        ctx.lineWidth = 1.15;
+        ctx.shadowColor = "#ff001e";
+        ctx.shadowBlur = 9;
+        ctx.stroke();
+      }
+
+      // Núcleo luminoso.
+      const raio = Math.max(
+        escalaFinal * 1.6,
+        12
+      );
+
+      const brilho = ctx.createRadialGradient(
+        centroX,
+        centroY,
+        0,
+        centroX,
+        centroY,
+        raio
+      );
+
+      brilho.addColorStop(
+        0,
+        "rgba(255, 210, 215, 0.9)"
+      );
+
+      brilho.addColorStop(
+        0.15,
+        "rgba(255, 0, 30, 0.55)"
+      );
+
+      brilho.addColorStop(
+        1,
+        "rgba(255, 0, 20, 0)"
+      );
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = brilho;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        centroX,
+        centroY,
+        raio,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+      // Avança a animação lentamente.
+      if (progresso < totalLinhas) {
+        progresso = Math.min(
+          progresso + linhasPorFrame,
+          totalLinhas
+        );
+      }
+
+      // Revela o carro quando o coração terminar.
+      if (
+        progresso >= totalLinhas &&
+        !finalizado
+      ) {
+        finalizado = true;
+
+        // Mantém o coração completo por um instante.
+        setTimeout(() => {
+          document.body.classList.add(
+            "finalizado"
+          );
+        }, 1000);
+      }
+
+      requestAnimationFrame(desenhar);
+    }
+
+    // Inicia automaticamente.
+    desenhar();
+  </script>
+
+</body>
+</html>
+```
